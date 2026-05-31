@@ -1,0 +1,53 @@
+# =============================================================================
+# configs/teacher_cifar10.yaml
+# Teacher training configuration — CIFAR-10 (10 classes, 32x32).
+# Reproduces: FID 5.47, IS 9.42 @ 50-step DDIM, w=4.0, 50K samples.
+# Hardware: single NVIDIA P100 16GB, ~24h.
+# =============================================================================
+
+# Dataset
+dataset:     cifar10
+num_classes: 10
+image_size:  32
+
+# Diffusion
+timesteps: 1000
+
+# UNet (teacher: 35.8M parameters)
+model:
+  ch:               128
+  out_ch:           3
+  ch_mult:          [1, 2, 2, 2]
+  num_res_blocks:   2
+  attn_resolutions: [16]
+  dropout:          0.1
+  in_channels:      3
+  resamp_with_conv: true
+
+# Training
+batch_size:      64
+lr:              0.0002
+lr_min:          0.000001
+num_epochs:      500
+ema_decay:       0.9999
+grad_clip_norm:  1.0
+cfg_dropout:     0.1       # Batch-level CFG null-token dropout probability
+
+# TIRT
+tirt_snr_gamma: 5.0
+
+# TAG (inference only)
+tag_w_min:   1.0
+tag_w_max:   4.0
+tag_beta:    5.0
+
+# DDIM evaluation
+ddim_steps: 50
+ddim_eta:   0.0
+
+# I/O
+checkpoint_every: 10
+val_every:        10
+keep_n:           2
+fid_samples:      50000
+fid_batch_size:   64

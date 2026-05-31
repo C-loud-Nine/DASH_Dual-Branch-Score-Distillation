@@ -1,0 +1,68 @@
+# =============================================================================
+# configs/student_cifar100.yaml
+# Student distillation configuration — CIFAR-100.
+# Reproduces: FID 10.47, IS 7.41, rho=0.89 @ 50-step DDIM, w=4.0, 50K samples.
+# Hardware: single NVIDIA P100 16GB, ~17h.
+# =============================================================================
+
+# Dataset
+dataset:     cifar100
+num_classes: 100
+image_size:  32
+
+# Diffusion
+timesteps: 1000
+
+# Teacher UNet (35.8M — loaded frozen from checkpoint)
+teacher_model:
+  ch:               128
+  out_ch:           3
+  ch_mult:          [1, 2, 2, 2]
+  num_res_blocks:   2
+  attn_resolutions: [16]
+  dropout:          0.1
+  in_channels:      3
+  resamp_with_conv: true
+
+# Student UNet (6.1M, 5.9x compression)
+student_model:
+  ch:               64
+  out_ch:           3
+  ch_mult:          [1, 2, 2, 2]
+  num_res_blocks:   1
+  attn_resolutions: [16]
+  dropout:          0.1
+  in_channels:      3
+  resamp_with_conv: true
+
+# Distillation training
+batch_size:     64
+lr:             0.0002
+lr_min:         0.000001
+num_epochs:     270
+ema_decay:      0.9995
+grad_clip:      1.0
+weight_decay:   0.001
+cfg_dropout:    0.1
+
+# DASH loss weights (Eq. 7)
+lam_im:  1.0
+lam_un:  1.0
+lam_an:  0.1
+
+# TIRT: frozen from teacher checkpoint
+tirt_snr_gamma: 5.0
+
+# DDIM evaluation
+ddim_steps:  50
+ddim_eta:    0.0
+tag_w_min:   1.0
+tag_w_max:   4.0
+tag_beta:    5.0
+
+# I/O
+checkpoint_every: 10
+val_every:        10
+keep_n:           2
+fid_samples:      50000
+fid_batch_size:   64
