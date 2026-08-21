@@ -14,7 +14,7 @@ pip install -r requirements.txt
 
 Tested on Python 3.10, PyTorch 2.0.
 CIFAR-10 / CIFAR-100 experiments run on a single NVIDIA T4 (16 GB).
-ImageNet-64 experiments run on TPU.
+ImageNet-64 experiments run on TPU and live in a self-contained directory.
 
 ---
 
@@ -38,12 +38,25 @@ DASH/
 │   └── student_cifar100.yaml
 ├── train_teacher.py            # Teacher training entry point
 ├── train_student.py            # DASH distillation entry point
-└── evaluate.py                 # FID, IS, rho, cos(Delta), Gap MSE
+├── evaluate.py                 # FID, IS, rho, cos(Delta), Gap MSE
+└── imagenet64_TPU/             # ImageNet-64 experiments
+    ├── configs/
+    │   ├── teacher.yaml        # 116.5M teacher
+    │   └── student.yaml        # 22.3M student, loss weights, TIRT Transfer
+    ├── config.py               # YAML loader with validation
+    ├── unet.py                 # ch 128/64, nrb 3/2, attention at 16 and 8
+    ├── diffusion.py            # cosine schedule, DDIM, TAG
+    ├── tirt.py                 # TIRT weighting (Eq. 2)
+    ├── losses.py               # DASH losses, composite baseline, calibration
+    ├── data.py                 # ImageNet-64 loader
+    ├── train_teacher.py
+    ├── train_student.py
+    └── evaluate.py
 ```
 
 ---
 
-## Training
+## Training (CIFAR)
 
 **Step 1 — Train teacher**
 
@@ -69,6 +82,40 @@ For CIFAR-100, substitute `cifar10` → `cifar100` throughout.
 
 ---
 
+## Training (ImageNet-64)
+
+Requires `torch-xla`. Point `--data_root` at the directory holding the official
+downsampled ImageNet-64 files `train_data_batch_1 … train_data_batch_10` and
+`val_data` (1,281,167 training images, 1000 classes).
+
+```bash
+cd imagenet64_TPU
+
+# teacher — 130 epochs, global batch 2048, cosine LR from 2e-4, no warmup
+python train_teacher.py --config configs/teacher.yaml \
+    --data_root /path/to/imagenet64 --out_dir ckpt/teacher
+
+# DASH student
+python train_student.py --config configs/student.yaml \
+    --data_root /path/to/imagenet64 \
+    --teacher_ckpt ckpt/teacher/teacher_ep0130.pth --out_dir ckpt/dash
+
+# evaluation
+python evaluate.py --config configs/student.yaml \
+    --data_root /path/to/imagenet64 \
+    --ckpt ckpt/dash/dash_ep0130.pth \
+    --teacher_ckpt ckpt/teacher/teacher_ep0130.pth --out_dir eval/dash
+```
+
+Baselines need no code changes: set `train.objective` in
+`imagenet64_TPU/configs/student.yaml` to `composite` or `no_lun`.
+
+`config.py` asserts on load that `snr_gamma = 5.0`, `TAG = (1.0, 4.0, 5.0)`,
+`lambda_im = lambda_un = 1.0`, and that the student's TIRT schedule is frozen,
+so a config that would silently change a reported number fails immediately.
+
+---
+
 ## Evaluation
 
 ```bash
@@ -81,13 +128,22 @@ python evaluate.py \
     --seeds        42 123 456
 ```
 
-Outputs: FID, IS (mean ± std over seeds), guidance gap ratio ρ, directional cosine cos(Δ), Gap MSE, and a `results.json` summary.
+Outputs: FID, IS (mean ± std over generation seeds), guidance gap ratio ρ,
+directional cosine cos(Δ), Gap MSE, and a `results.json` summary.
+
+**Sampling protocol.** Teacher and student are evaluated with the identical
+sampler: 50-step DDIM under the TAG schedule with `w_max = 4.0`
+(`w_min = 1.0`, `β = 5.0`), so the guidance weight runs from 3.77 at low noise
+to 1.23 at high noise. Reported standard deviations are over three generation
+seeds from a single trained checkpoint and measure sampling variance, not
+training variance.
 
 ---
 
 ## Key hyperparameters
 
-All paper hyperparameters are in `configs/`. Key values:
+All paper hyperparameters are in `configs/` (CIFAR) and
+`imagenet64_TPU/configs/` (ImageNet-64). Key values:
 
 | Setting | Teacher | Student |
 |---|---|---|
@@ -96,23 +152,28 @@ All paper hyperparameters are in `configs/`. Key values:
 | Iterations | 391K (~500 ep.) | 234K (~300 ep.) |
 | Batch size | 64 | 64 |
 | Learning rate | 2e-4 | 1e-4 |
-| EMA decay | 0.9999 | 0.9990 |
+| EMA decay | 0.9999 | 0.9995 |
 | CFG dropout | 10% | dual-pass (none) |
 | λ_im / λ_un / λ_an | — | 1.0 / 1.0 / 0.1 |
 | TIRT γ | 5.0 | frozen from teacher |
-| TAG w_min / w_max / β | 1.0 / 4.0 / 5.0 | — |
+| TAG w_min / w_max / β | 1.0 / 4.0 / 5.0 | shared at evaluation |
 | DDIM steps (eval) | 50 | 50 |
-| Seeds | 42, 123, 456 | 42, 123, 456 |
+| Generation seeds | 42, 123, 456 | 42, 123, 456 |
 
 **ImageNet-64** uses the same loss weights and TIRT settings, with a 116.5M
-teacher and a 22.3M student (5.2× compression), trained for 130 epochs at
-global batch 2048 with cosine decay from 2e-4 and no warmup.
+teacher (ch=128, nrb=3) and a 22.3M student (ch=64, nrb=2; 5.2× compression),
+channel multipliers (1,2,3,4) and attention at 16×16 and 8×8, trained for 130
+epochs at global batch 2048 with cosine decay from 2e-4 and no warmup.
+
+`λ_im = λ_un = 1.0` is not arbitrary: symmetric weights make the residual Gram
+matrix the identity, so the two branch constraints are equally conditioned and
+neither dominates the gradient.
 
 ---
 
 ## Expected results
 
-### CIFAR-10 / CIFAR-100 (mean ± std over 3 seeds)
+### CIFAR-10 / CIFAR-100 (mean ± std over 3 generation seeds)
 
 | Model | Params | C10 FID ↓ | C10 IS ↑ | C100 FID ↓ | C100 IS ↑ | ρ (C10/C100) |
 |---|---|---|---|---|---|---|
@@ -124,19 +185,22 @@ global batch 2048 with cosine decay from 2e-4 and no warmup.
 | FitNets | 6.1M | 12.84 ± 0.21 | 8.74 ± 0.08 | 19.47 ± 0.35 | 6.89 ± 0.07 | 0.63 / 0.61 |
 | Gap Δ match | 6.1M | 11.42 ± 0.18 | 8.34 ± 0.07 | 18.46 ± 0.33 | 6.58 ± 0.07 | 0.81 / 0.78 |
 | Magnitude pruning | 8.95M | 18.04 ± 0.33 | 8.56 ± 0.07 | 24.48 ± 0.43 | 6.89 ± 0.08 | 0.71 / 0.66 |
-| Single-head (no-CFG) | 8.99M | 16.78 ± 0.25 | 9.00 ± 0.06 | 23.50 ± 0.47 | 7.19 ± 0.09 | — |
+| Single-head, *w*-conditioned | 8.99M | 16.78 ± 0.25 | 9.00 ± 0.06 | 23.50 ± 0.47 | 7.19 ± 0.09 | — |
 | **DASH (ours)** | **6.1M** | **8.87 ± 0.12** | **9.31 ± 0.06** | **10.47 ± 0.16** | **7.41 ± 0.05** | **0.91 / 0.89** |
 
-### ImageNet-64 (1000 classes, 64×64)
+Single-head emits no separate conditional and unconditional predictions, so ρ,
+cos(Δ) and MSE_Δ are undefined for it.
+
+### ImageNet-64 (1000 classes, 64×64; mean ± std over 3 generation seeds)
 
 | Model | Params | FID ↓ | IS ↑ | ρ | cos(Δ) | MSE_Δ |
 |---|---|---|---|---|---|---|
-| Teacher | 116.5M | 6.34 | 48.35 | 1.00 | 1.00 | 0.000 |
-| Composite | 22.3M | 18.43 | 43.67 | 0.65 | 0.68 | 0.130 |
-| w/o L_un | 22.3M | 16.95 | 44.53 | 0.61 | 0.72 | 0.153 |
-| **DASH (ours)** | **22.3M** | **9.10** | **47.32** | **0.89** | **0.92** | **0.036** |
+| Teacher | 116.5M | 6.34 ± 0.09 | 48.35 ± 0.31 | 1.00 | 1.00 | 0.000 |
+| Composite | 22.3M | 18.43 ± 0.43 | 43.67 ± 0.35 | 0.65 | 0.68 | 0.130 |
+| w/o L_un | 22.3M | 16.95 ± 0.28 | 44.53 ± 0.48 | 0.61 | 0.72 | 0.153 |
+| **DASH (ours)** | **22.3M** | **9.10 ± 0.14** | **47.32 ± 0.37** | **0.89** | **0.92** | **0.036** |
 
-All results: 50-step DDIM, *w* = 4.0, 50K samples.
+All results: 50-step DDIM, TAG `w_max` = 4.0, 50K samples.
 
 ### Efficiency (T4, batch 64)
 
