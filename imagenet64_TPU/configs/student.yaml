@@ -1,0 +1,84 @@
+# =============================================================================
+# ImageNet-64 DASH student — 22.3M parameters (5.2x compression)
+# Values correspond to Table A1 of the supplementary material.
+#
+# Set `objective` to switch between the main result and the Table 2 baselines:
+#   dash       lambda_im * L_im + lambda_un * L_un + lambda_an * L_an
+#   no_lun     drops L_un                        (ablation)
+#   composite  supervises only the guided score  (baseline)
+# =============================================================================
+
+name: in64_student
+role: student
+teacher_config: configs/teacher.yaml
+
+data:
+  dataset: imagenet64
+  image_size: 64
+  num_classes: 1000
+  train_images: 1281167
+  normalise: [-1, 1]
+  augmentation: none
+
+diffusion:
+  timesteps: 1000
+  beta_schedule: cosine
+  cosine_s: 0.008
+
+model:
+  # ch 128 -> 64 and nrb 3 -> 2 gives 22.3M (5.2x). nrb is not reduced to 1:
+  # the teacher needs nrb=3 at 1000 classes, and a nrb=1 student risks being
+  # capacity-starved, which would confound the guidance-gap claim Table 2
+  # exists to isolate.
+  ch: 64
+  ch_mult: [1, 2, 3, 4]
+  num_res_blocks: 2
+  attn_resolutions: [16, 8]
+  dropout: 0.0
+  in_channels: 3
+  out_ch: 3
+  resamp_with_conv: true
+  params: 22.3M
+
+train:
+  objective: dash             # dash | no_lun | composite
+  epochs: 130
+  global_batch: 2048
+  optimiser: adamw
+  lr: 2.0e-4
+  lr_schedule: cosine
+  adam_betas: [0.9, 0.999]
+  grad_clip: 1.0
+  ema_decay: 0.9995
+  cfg_dropout: 0.1
+  seed: 42
+  hardware: tpu
+
+loss:
+  # lambda_im = lambda_un = 1.0 makes the residual Gram matrix the identity,
+  # so the two branch constraints are equally conditioned and neither
+  # dominates the gradient.
+  lambda_im: 1.0
+  lambda_un: 1.0
+  lambda_an: 0.1
+  composite_w: 4.0            # used only when objective == composite
+
+tirt:
+  # TIRT Transfer: the teacher's converged lambda is copied and frozen.
+  # Under L_DASH the gradient on lambda measures student-teacher mismatch at
+  # a converged teacher, not content difficulty, so it is held fixed.
+  snr_gamma: 5.0
+  transfer_from_teacher: true
+  weight_objective: frozen
+
+tag:
+  w_min: 1.0
+  w_max: 4.0
+  beta: 5.0
+
+eval:
+  ddim_steps: 50
+  n_samples: 50000
+  use_tag: true
+  reference: train
+  calibration_pairs: 10000    # for rho, cos(Delta), MSE_Delta
