@@ -1,13 +1,21 @@
+<div align="center">
+
 # DASH: Dual-Branch Score Distillation for Guidance-Calibrated Compact Diffusion Models
 
-[![WACV 2027](https://img.shields.io/badge/WACV-2027-blue)](https://wacv.thecvf.com/Conferences/2027)
+**Abdullah Al Shafi<sup>1</sup>, Kazi Saeed Alam<sup>1</sup>, Sk. Imran Hossain<sup>1</sup>, Engelbert Mephu Nguifo<sup>2</sup>**
+
+<sup>1</sup>Khulna University of Engineering & Technology, Bangladesh &nbsp;&nbsp; <sup>2</sup>University Clermont Auvergne, Clermont INP, CNRS, France
+
+**WACV 2027 (Algorithms Track)**
+
+[![Project Page](https://img.shields.io/badge/Project-Page-2ea44f)](https://c-loud-nine.github.io/DASH_Website/)
 [![arXiv](https://img.shields.io/badge/arXiv-2606.00798-b31b1b)](https://arxiv.org/abs/2606.00798)
+[![Paper](https://img.shields.io/badge/Paper-PDF-blue)](https://arxiv.org/pdf/2606.00798)
+[![WACV 2027](https://img.shields.io/badge/WACV-2027-purple)](https://wacv.thecvf.com/Conferences/2027)
 
-**Abdullah Al Shafi, Kazi Saeed Alam, Sk. Imran Hossain, Engelbert Mephu Nguifo**
+[**Project Page**](https://c-loud-nine.github.io/DASH_Website/) · [**arXiv**](https://arxiv.org/abs/2606.00798) · [**Paper (PDF)**](https://arxiv.org/pdf/2606.00798)
 
-Official code for **DASH**, accepted at the **IEEE/CVF Winter Conference on Applications of Computer Vision (WACV 2027)**, Algorithms Track.
-
-**Paper:** [arXiv:2606.00798](https://arxiv.org/abs/2606.00798) · **Conference:** [WACV 2027](https://wacv.thecvf.com/Conferences/2027)
+</div>
 
 ---
 
@@ -24,21 +32,23 @@ Parameter compression of class-conditional diffusion models exposes a structural
 
 DASH resolves this through independent supervision of both score branches, together with TIRT Transfer: the student's per-timestep training curriculum is initialised from the teacher's converged weights and held fixed as a frozen prior.
 
+For figures, results and a visual walkthrough, see the [project page](https://c-loud-nine.github.io/DASH_Website/).
+
 ---
 
 ## Requirements
 
-```
+```bash
 pip install -r requirements.txt
 ```
 
-Tested on Python 3.10, PyTorch 2.0.
-CIFAR-10 / CIFAR-100 experiments run on a single NVIDIA T4 (16 GB).
-ImageNet-64 experiments run on TPU and live in a self-contained directory.
+- Tested on Python 3.10, PyTorch 2.0.
+- CIFAR-10 / CIFAR-100 experiments run on a single NVIDIA T4 (16 GB).
+- ImageNet-64 experiments run on TPU and live in a self-contained directory.
 
 ---
 
-## Repository structure
+## Repository Structure
 
 ```
 DASH/
@@ -78,7 +88,7 @@ DASH/
 
 ## Training (CIFAR)
 
-**Step 1: Train teacher**
+**Step 1: Train the teacher**
 
 ```bash
 python train_teacher.py \
@@ -88,7 +98,7 @@ python train_teacher.py \
     --download
 ```
 
-**Step 2: Distil student**
+**Step 2: Distil the student**
 
 ```bash
 python train_student.py \
@@ -104,9 +114,7 @@ For CIFAR-100, substitute `cifar10` → `cifar100` throughout.
 
 ## Training (ImageNet-64)
 
-Requires `torch-xla`. Point `--data_root` at the directory holding the official
-downsampled ImageNet-64 files `train_data_batch_1 … train_data_batch_10` and
-`val_data` (1,281,167 training images, 1000 classes).
+Requires `torch-xla`. Point `--data_root` at the directory holding the official downsampled ImageNet-64 files `train_data_batch_1 … train_data_batch_10` and `val_data` (1,281,167 training images, 1000 classes).
 
 ```bash
 cd imagenet64_TPU
@@ -127,12 +135,9 @@ python evaluate.py --config configs/student.yaml \
     --teacher_ckpt ckpt/teacher/teacher_ep0130.pth --out_dir eval/dash
 ```
 
-Baselines need no code changes: set `train.objective` in
-`imagenet64_TPU/configs/student.yaml` to `composite` or `no_lun`.
+Baselines need no code changes: set `train.objective` in `imagenet64_TPU/configs/student.yaml` to `composite` or `no_lun`.
 
-`config.py` asserts on load that `snr_gamma = 5.0`, `TAG = (1.0, 4.0, 5.0)`,
-`lambda_im = lambda_un = 1.0`, and that the student's TIRT schedule is frozen,
-so a config that would silently change a reported number fails immediately.
+`config.py` asserts on load that `snr_gamma = 5.0`, `TAG = (1.0, 4.0, 5.0)`, `lambda_im = lambda_un = 1.0`, and that the student's TIRT schedule is frozen, so a config that would silently change a reported number fails immediately.
 
 ---
 
@@ -148,22 +153,15 @@ python evaluate.py \
     --seeds        42 123 456
 ```
 
-Outputs: FID, IS (mean ± std over generation seeds), guidance gap ratio ρ,
-directional cosine cos(Δ), Gap MSE, and a `results.json` summary.
+Outputs: FID, IS (mean ± std over generation seeds), guidance gap ratio ρ, directional cosine cos(Δ), Gap MSE, and a `results.json` summary.
 
-**Sampling protocol.** Teacher and student are evaluated with the identical
-sampler: 50-step DDIM under the TAG schedule with `w_max = 4.0`
-(`w_min = 1.0`, `β = 5.0`), so the guidance weight runs from 3.77 at low noise
-to 1.23 at high noise. Reported standard deviations are over three generation
-seeds from a single trained checkpoint and measure sampling variance, not
-training variance.
+**Sampling protocol.** Teacher and student are evaluated with the identical sampler: 50-step DDIM under the TAG schedule with `w_max = 4.0` (`w_min = 1.0`, `β = 5.0`), so the guidance weight runs from 3.77 at low noise to 1.23 at high noise. Reported standard deviations are over three generation seeds from a single trained checkpoint and measure sampling variance, not training variance.
 
 ---
 
-## Key hyperparameters
+## Key Hyperparameters
 
-All paper hyperparameters are in `configs/` (CIFAR) and
-`imagenet64_TPU/configs/` (ImageNet-64). Key values:
+All paper hyperparameters are in `configs/` (CIFAR) and `imagenet64_TPU/configs/` (ImageNet-64).
 
 | Setting | Teacher | Student |
 |---|---|---|
@@ -180,18 +178,13 @@ All paper hyperparameters are in `configs/` (CIFAR) and
 | DDIM steps (eval) | 50 | 50 |
 | Generation seeds | 42, 123, 456 | 42, 123, 456 |
 
-**ImageNet-64** uses the same loss weights and TIRT settings, with a 116.5M
-teacher (ch=128, nrb=3) and a 22.3M student (ch=64, nrb=2; 5.2× compression),
-channel multipliers (1,2,3,4) and attention at 16×16 and 8×8, trained for 130
-epochs at global batch 2048 with cosine decay from 2e-4 and no warmup.
+**ImageNet-64** uses the same loss weights and TIRT settings, with a 116.5M teacher (ch=128, nrb=3) and a 22.3M student (ch=64, nrb=2; 5.2× compression), channel multipliers (1,2,3,4) and attention at 16×16 and 8×8, trained for 130 epochs at global batch 2048 with cosine decay from 2e-4 and no warmup.
 
-`λ_im = λ_un = 1.0` is not arbitrary: symmetric weights make the residual Gram
-matrix the identity, so the two branch constraints are equally conditioned and
-neither dominates the gradient.
+`λ_im = λ_un = 1.0` is not arbitrary: symmetric weights make the residual Gram matrix the identity, so the two branch constraints are equally conditioned and neither dominates the gradient.
 
 ---
 
-## Expected results
+## Results
 
 ### CIFAR-10 / CIFAR-100 (mean ± std over 3 generation seeds)
 
@@ -208,8 +201,7 @@ neither dominates the gradient.
 | Single-head, *w*-conditioned | 8.99M | 16.78 ± 0.25 | 9.00 ± 0.06 | 23.50 ± 0.47 | 7.19 ± 0.09 | — |
 | **DASH (ours)** | **6.1M** | **8.87 ± 0.12** | **9.31 ± 0.06** | **10.47 ± 0.16** | **7.41 ± 0.05** | **0.91 / 0.89** |
 
-Single-head emits no separate conditional and unconditional predictions, so ρ,
-cos(Δ) and MSE_Δ are undefined for it.
+Single-head emits no separate conditional and unconditional predictions, so ρ, cos(Δ) and MSE_Δ are undefined for it.
 
 ### ImageNet-64 (1000 classes, 64×64; mean ± std over 3 generation seeds)
 
@@ -235,18 +227,7 @@ All results: 50-step DDIM, TAG `w_max` = 4.0, 50K samples.
 
 ## Citation
 
-If you find this work useful, please cite:
-
-```bibtex
-@inproceedings{shafi2027dash,
-  title     = {{DASH}: Dual-Branch Score Distillation for Guidance-Calibrated Compact Diffusion Models},
-  author    = {Shafi, Abdullah Al and Alam, Kazi Saeed and Hossain, Sk. Imran and Mephu Nguifo, Engelbert},
-  booktitle = {Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)},
-  year      = {2027}
-}
-```
-
-arXiv version:
+DASH is accepted at [WACV 2027](https://wacv.thecvf.com/Conferences/2027). Until the proceedings are published, please cite the arXiv version:
 
 ```bibtex
 @article{shafi2026dash,
