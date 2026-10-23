@@ -1,8 +1,28 @@
 # DASH: Dual-Branch Score Distillation for Guidance-Calibrated Compact Diffusion Models
 
-Parameter compression of class-conditional diffusion models exposes a structural failure mode in existing distillation objectives: supervising only the conditional branch or the composite guided prediction leaves the classifier-free guidance gap underdetermined, admitting degenerate solutions where the student's guidance gap collapses at inference.
+[![WACV 2027](https://img.shields.io/badge/WACV-2027-blue)](https://wacv.thecvf.com/Conferences/2027)
+[![arXiv](https://img.shields.io/badge/arXiv-2606.00798-b31b1b)](https://arxiv.org/abs/2606.00798)
 
-DASH resolves this through independent supervision of both score branches, together with TIRT Transfer — a mechanism that initialises the student's per-timestep training curriculum from the teacher's converged weights as a frozen prior.
+**Abdullah Al Shafi, Kazi Saeed Alam, Sk. Imran Hossain, Engelbert Mephu Nguifo**
+
+Official code for **DASH**, accepted at the **IEEE/CVF Winter Conference on Applications of Computer Vision (WACV 2027)**, Algorithms Track.
+
+**Paper:** [arXiv:2606.00798](https://arxiv.org/abs/2606.00798) · **Conference:** [WACV 2027](https://wacv.thecvf.com/Conferences/2027)
+
+---
+
+## News
+
+- **2026-10:** DASH is accepted at WACV 2027.
+- **2026-05:** Preprint released on [arXiv](https://arxiv.org/abs/2606.00798).
+
+---
+
+## Overview
+
+Parameter compression of class-conditional diffusion models exposes a structural limitation in output-level distillation: supervising only the conditional branch or the composite guided prediction leaves the classifier-free guidance gap underdetermined, admitting degenerate solutions where the student's guidance gap collapses at inference.
+
+DASH resolves this through independent supervision of both score branches, together with TIRT Transfer: the student's per-timestep training curriculum is initialised from the teacher's converged weights and held fixed as a frozen prior.
 
 ---
 
@@ -58,7 +78,7 @@ DASH/
 
 ## Training (CIFAR)
 
-**Step 1 — Train teacher**
+**Step 1: Train teacher**
 
 ```bash
 python train_teacher.py \
@@ -68,7 +88,7 @@ python train_teacher.py \
     --download
 ```
 
-**Step 2 — Distil student**
+**Step 2: Distil student**
 
 ```bash
 python train_student.py \
@@ -91,7 +111,7 @@ downsampled ImageNet-64 files `train_data_batch_1 … train_data_batch_10` and
 ```bash
 cd imagenet64_TPU
 
-# teacher — 130 epochs, global batch 2048, cosine LR from 2e-4, no warmup
+# teacher: 130 epochs, global batch 2048, cosine LR from 2e-4, no warmup
 python train_teacher.py --config configs/teacher.yaml \
     --data_root /path/to/imagenet64 --out_dir ckpt/teacher
 
@@ -197,7 +217,7 @@ cos(Δ) and MSE_Δ are undefined for it.
 |---|---|---|---|---|---|---|
 | Teacher | 116.5M | 6.34 ± 0.09 | 48.35 ± 0.31 | 1.00 | 1.00 | 0.000 |
 | Composite | 22.3M | 18.43 ± 0.43 | 43.67 ± 0.35 | 0.65 | 0.68 | 0.130 |
-| w/o L_un | 22.3M | 16.95 ± 0.28 | 44.53 ± 0.48 | 0.61 | 0.72 | 0.153 |
+| w/o L_un | 22.3M | 20.13 ± 0.31 | 41.67 ± 0.53 | 0.22 | 0.27 | 0.228 |
 | **DASH (ours)** | **22.3M** | **9.10 ± 0.14** | **47.32 ± 0.37** | **0.89** | **0.92** | **0.036** |
 
 All results: 50-step DDIM, TAG `w_max` = 4.0, 50K samples.
@@ -209,4 +229,36 @@ All results: 50-step DDIM, TAG `w_max` = 4.0, 50K samples.
 | Parameters | 35.75M | 6.08M | 5.9× |
 | FLOPs, 50-step CFG | 1247.8 G | 216.3 G | 5.77× |
 | Latency | 14217.3 ms | 3925.8 ms | 3.62× |
-| Peak memory | 821.1 MB | 479.9 MB | 1.71× |
+| Peak memory | 821.1 MB | 349.9 MB | 2.35× |
+
+---
+
+## Citation
+
+If you find this work useful, please cite:
+
+```bibtex
+@inproceedings{shafi2027dash,
+  title     = {{DASH}: Dual-Branch Score Distillation for Guidance-Calibrated Compact Diffusion Models},
+  author    = {Shafi, Abdullah Al and Alam, Kazi Saeed and Hossain, Sk. Imran and Mephu Nguifo, Engelbert},
+  booktitle = {Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)},
+  year      = {2027}
+}
+```
+
+arXiv version:
+
+```bibtex
+@article{shafi2026dash,
+  title   = {{DASH}: Dual-Branch Score Distillation for Guidance-Calibrated Compact Diffusion Models},
+  author  = {Shafi, Abdullah Al and Alam, Kazi Saeed and Hossain, Sk. Imran and Mephu Nguifo, Engelbert},
+  journal = {arXiv preprint arXiv:2606.00798},
+  year    = {2026}
+}
+```
+
+---
+
+## License
+
+See [LICENSE](LICENSE).
