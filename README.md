@@ -30,7 +30,11 @@
 
 Parameter compression of class-conditional diffusion models exposes a structural limitation in output-level distillation: supervising only the conditional branch or the composite guided prediction leaves the classifier-free guidance gap underdetermined, admitting degenerate solutions where the student's guidance gap collapses at inference.
 
+<<<<<<< HEAD
 DASH resolves this through independent supervision of both score branches, together with TIRT Transfer: the student's per-timestep training curriculum is initialised from the teacher's final learned weights and held fixed as a frozen prior.
+=======
+DASH resolves this through independent supervision of both score branches, together with TIRT Transfer: the student's per-timestep training curriculum is initialised from the teacher's converged weights and held fixed as a frozen prior.
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
 
 For figures, results and a visual walkthrough, see the [project page](https://c-loud-nine.github.io/DASH_Website/).
 
@@ -119,25 +123,40 @@ Requires `torch-xla`. Point `--data_root` at the directory holding the official 
 ```bash
 cd imagenet64_TPU
 
+<<<<<<< HEAD
 # teacher: 300 epochs, global batch 2048, cosine LR from 2e-4, no warmup
+=======
+# teacher: 130 epochs, global batch 2048, cosine LR from 2e-4, no warmup
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
 python train_teacher.py --config configs/teacher.yaml \
     --data_root /path/to/imagenet64 --out_dir ckpt/teacher
 
 # DASH student
 python train_student.py --config configs/student.yaml \
     --data_root /path/to/imagenet64 \
+<<<<<<< HEAD
     --teacher_ckpt ckpt/teacher/teacher_ep0300.pth --out_dir ckpt/dash
+=======
+    --teacher_ckpt ckpt/teacher/teacher_ep0130.pth --out_dir ckpt/dash
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
 
 # evaluation
 python evaluate.py --config configs/student.yaml \
     --data_root /path/to/imagenet64 \
     --ckpt ckpt/dash/dash_ep0130.pth \
+<<<<<<< HEAD
     --teacher_ckpt ckpt/teacher/teacher_ep0300.pth --out_dir eval/dash
 ```
 
 Run the evaluation once per generation seed (`--seed 42`, `123`, `456`); each run writes `gen_<protocol>_seed<seed>/` and `results_<protocol>_seed<seed>.json`. Both checkpoints are evaluated with their EMA weights.
 
 Baselines need no code changes: pass `--objective composite` or `--objective no_lun` to `train_student.py`.
+=======
+    --teacher_ckpt ckpt/teacher/teacher_ep0130.pth --out_dir eval/dash
+```
+
+Baselines need no code changes: set `train.objective` in `imagenet64_TPU/configs/student.yaml` to `composite` or `no_lun`.
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
 
 `config.py` asserts on load that `snr_gamma = 5.0`, `TAG = (1.0, 4.0, 5.0)`, `lambda_im = lambda_un = 1.0`, and that the student's TIRT schedule is frozen, so a config that would silently change a reported number fails immediately.
 
@@ -155,11 +174,17 @@ python evaluate.py \
     --seeds        42 123 456
 ```
 
+<<<<<<< HEAD
 For CIFAR-100, add `--fid_ref /path/to/cifar100_train_png` (a folder of the 50,000 CIFAR-100 training images); CIFAR-10 uses the built-in `cifar10-train` reference.
 
 Outputs: FID, IS (mean ± std over generation seeds), guidance gap ratio ρ, directional cosine cos(Δ), Gap MSE, and a `results.json` summary.
 
 **Sampling protocol.** Teacher and student are evaluated with the identical sampler: 50-step DDIM under the TAG schedule with `w_max = 4.0` (`w_min = 1.0`, `β = 5.0`, κ in the paper), so the guidance weight runs from 3.77 at low noise to 1.23 at high noise. Reported standard deviations are over three generation seeds from a single trained checkpoint and measure sampling variance, not training variance.
+=======
+Outputs: FID, IS (mean ± std over generation seeds), guidance gap ratio ρ, directional cosine cos(Δ), Gap MSE, and a `results.json` summary.
+
+**Sampling protocol.** Teacher and student are evaluated with the identical sampler: 50-step DDIM under the TAG schedule with `w_max = 4.0` (`w_min = 1.0`, `β = 5.0`), so the guidance weight runs from 3.77 at low noise to 1.23 at high noise. Reported standard deviations are over three generation seeds from a single trained checkpoint and measure sampling variance, not training variance.
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
 
 ---
 
@@ -178,6 +203,7 @@ All paper hyperparameters are in `configs/` (CIFAR) and `imagenet64_TPU/configs/
 | CFG dropout | 10% | dual-pass (none) |
 | λ_im / λ_un / λ_an | — | 1.0 / 1.0 / 0.1 |
 | TIRT γ | 5.0 | frozen from teacher |
+<<<<<<< HEAD
 | TAG w_min / w_max / β (κ) | 1.0 / 4.0 / 5.0 | shared at evaluation |
 | DDIM steps (eval) | 50 | 50 |
 | Generation seeds | 42, 123, 456 | 42, 123, 456 |
@@ -185,6 +211,15 @@ All paper hyperparameters are in `configs/` (CIFAR) and `imagenet64_TPU/configs/
 **ImageNet-64** uses the same loss weights and TIRT settings, with a 116.5M teacher (ch=128, nrb=3) and a 22.3M student (ch=64, nrb=2; 5.2× compression), channel multipliers (1,2,3,4) and attention at 16×16 and 8×8, trained for 300 (teacher) and 130 (student) epochs at global batch 2048 with cosine decay from 2e-4 and no warmup.
 
 `λ_im = λ_un = 1.0` is not arbitrary: symmetric weights make the residual Gram matrix the identity, so the two branch constraints are equally conditioned.
+=======
+| TAG w_min / w_max / β | 1.0 / 4.0 / 5.0 | shared at evaluation |
+| DDIM steps (eval) | 50 | 50 |
+| Generation seeds | 42, 123, 456 | 42, 123, 456 |
+
+**ImageNet-64** uses the same loss weights and TIRT settings, with a 116.5M teacher (ch=128, nrb=3) and a 22.3M student (ch=64, nrb=2; 5.2× compression), channel multipliers (1,2,3,4) and attention at 16×16 and 8×8, trained for 130 epochs at global batch 2048 with cosine decay from 2e-4 and no warmup.
+
+`λ_im = λ_un = 1.0` is not arbitrary: symmetric weights make the residual Gram matrix the identity, so the two branch constraints are equally conditioned and neither dominates the gradient.
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
 
 ---
 
@@ -195,13 +230,20 @@ All paper hyperparameters are in `configs/` (CIFAR) and `imagenet64_TPU/configs/
 | Model | Params | C10 FID ↓ | C10 IS ↑ | C100 FID ↓ | C100 IS ↑ | ρ (C10/C100) |
 |---|---|---|---|---|---|---|
 | Teacher | 35.8M | 5.47 ± 0.04 | 9.42 ± 0.05 | 6.80 ± 0.05 | 7.46 ± 0.04 | 1.00 |
+<<<<<<< HEAD
 | Scratch | 6.1M | 20.47 ± 0.31 | 7.44 ± 0.09 | 26.14 ± 0.44 | 6.51 ± 0.08 | 0.80 / 0.78 |
+=======
+| Scratch | 6.1M | 20.47 ± 0.31 | 7.44 ± 0.09 | 26.14 ± 0.44 | 6.51 ± 0.08 | — |
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
 | Cond-only | 6.1M | 22.31 ± 0.46 | 7.21 ± 0.11 | 27.83 ± 0.59 | 5.98 ± 0.10 | 0.09 / 0.08 |
 | Composite | 6.1M | 13.84 ± 0.22 | 8.63 ± 0.08 | 20.84 ± 0.37 | 6.84 ± 0.07 | 0.68 / 0.65 |
 | Multi-*w* composite | 6.1M | 13.67 ± 0.19 | 8.96 ± 0.09 | 19.13 ± 0.37 | 7.23 ± 0.05 | 0.75 / 0.71 |
 | FitNets | 6.1M | 12.84 ± 0.21 | 8.74 ± 0.08 | 19.47 ± 0.35 | 6.89 ± 0.07 | 0.63 / 0.61 |
 | Gap Δ match | 6.1M | 11.42 ± 0.18 | 8.34 ± 0.07 | 18.46 ± 0.33 | 6.58 ± 0.07 | 0.81 / 0.78 |
+<<<<<<< HEAD
 | Label-dropout | 6.1M | 11.43 ± 0.11 | 8.88 ± 0.09 | 14.56 ± 0.27 | 7.10 ± 0.11 | 0.81 / 0.82 |
+=======
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
 | Magnitude pruning | 8.95M | 18.04 ± 0.33 | 8.56 ± 0.07 | 24.48 ± 0.43 | 6.89 ± 0.08 | 0.71 / 0.66 |
 | Single-head, *w*-conditioned | 8.99M | 16.78 ± 0.25 | 9.00 ± 0.06 | 23.50 ± 0.47 | 7.19 ± 0.09 | — |
 | **DASH (ours)** | **6.1M** | **8.87 ± 0.12** | **9.31 ± 0.06** | **10.47 ± 0.16** | **7.41 ± 0.05** | **0.91 / 0.89** |

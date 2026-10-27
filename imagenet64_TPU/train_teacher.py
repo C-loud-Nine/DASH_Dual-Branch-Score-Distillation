@@ -4,7 +4,11 @@
 #
 #   python train_teacher.py --data_root /path/to/imagenet64 --out_dir ckpt/teacher
 #
+<<<<<<< HEAD
 # 300 epochs, global batch 2048, cosine LR from 2e-4 with no warmup, EMA 0.9999.
+=======
+# 130 epochs, global batch 2048, cosine LR from 2e-4 with no warmup, EMA 0.9999.
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
 # The loss is TIRT-weighted (Eq. 2); TAG is inference-only and is not used here.
 # =============================================================================
 

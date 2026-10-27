@@ -33,9 +33,13 @@ class TIRT(nn.Module):
 
     lambda_t is initialised to 0, so sigmoid(0) = 0.5 uniformly and the
     schedule starts at the Min-SNR baseline up to a constant factor.
+<<<<<<< HEAD
     The sigmoid bounds each raw factor to (0, 1); after unit-mean
     normalisation the relative weights are not bounded, so TIRT is a
     finite-budget heuristic (paper Sec. 3.3).
+=======
+    The sigmoid bounds omega_t against extreme reweighting.
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
 
     Args:
         timesteps:        Total diffusion steps T.
@@ -134,7 +138,11 @@ class TIRT(nn.Module):
         """Load a teacher lambda_t and, by default, freeze it.
 
         Under L_DASH the gradient on lambda measures student-teacher mismatch
+<<<<<<< HEAD
         at a trained teacher rather than content difficulty, so the
+=======
+        at a converged teacher rather than content difficulty, so the
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
         transferred schedule is held fixed during distillation.
         """
         if lam.shape != self.importance_adjustment.shape:
@@ -162,7 +170,11 @@ class EMAHelper:
     """Exponential Moving Average of model parameters.
 
     Args:
+<<<<<<< HEAD
         mu: EMA decay (0.9999 teacher, 0.9995 student).
+=======
+        mu: EMA decay (0.9999 teacher, 0.9990 student).
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
     """
 
     def __init__(self, mu: float = 0.9999):

@@ -47,9 +47,12 @@ def _run(rank, args):
     ck = torch.load(args.teacher_ckpt, map_location="cpu")
     teacher = build(tcfg).to(device)
     teacher.load_state_dict(ck["model_state_dict"])
+<<<<<<< HEAD
     for n, p_ in teacher.named_parameters():
         if n in ck["ema_state_dict"]["shadow"]:
             p_.data.copy_(ck["ema_state_dict"]["shadow"][n])
+=======
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
     teacher.eval()
     for p_ in teacher.parameters():
         p_.requires_grad_(False)
@@ -57,9 +60,15 @@ def _run(rank, args):
     # ---- student ----
     student = build(scfg).to(device)
 
+<<<<<<< HEAD
     # TIRT Transfer: copy the teacher's final lambda and freeze it.
     # Under L_DASH the gradient on lambda measures student-teacher mismatch at
     # a trained teacher, not content difficulty, so it is held fixed.
+=======
+    # TIRT Transfer: copy the teacher's converged lambda and freeze it.
+    # Under L_DASH the gradient on lambda measures student-teacher mismatch at
+    # a converged teacher, not content difficulty, so it is held fixed.
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
     tirt = TIRT(scfg.timesteps, scfg.tirt_snr_gamma,
                 weight_objective="frozen", alphas_cumprod=abar.cpu()).to(device)
     tirt.load_transferred(ck["tirt_state_dict"]["importance_adjustment"],

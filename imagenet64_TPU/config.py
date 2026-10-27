@@ -39,6 +39,7 @@ def load(path):
         raw = yaml.safe_load(f)
     cfg = Cfg(raw)
     cfg.raw = raw
+<<<<<<< HEAD
     # The scripts read flat names (cfg.timesteps, cfg.lr, cfg.tag_w_max, ...).
     for sec in ("data", "diffusion", "train", "loss", "eval"):
         for k, v in raw.get(sec, {}).items():
@@ -46,6 +47,8 @@ def load(path):
     for sec in ("tirt", "tag"):
         for k, v in raw.get(sec, {}).items():
             cfg.setdefault(f"{sec}_{k}", v)
+=======
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
 
     tpath = raw.get("teacher_config")
     if tpath:

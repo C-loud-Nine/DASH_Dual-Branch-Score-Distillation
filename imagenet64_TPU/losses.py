@@ -1,5 +1,9 @@
 # =============================================================================
+<<<<<<< HEAD
 # losses.py — DASH dual-branch objective (main paper Eqs. 5-8).
+=======
+# losses.py — DASH dual-branch objective (main paper Eqs. 4-7).
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
 #
 #   L_im  = E[ omega_t || eps^y_S  - eps^y_T  ||^2 ]   conditional branch
 #   L_un  = E[ omega_t || eps^0_S  - eps^0_T  ||^2 ]   unconditional branch
@@ -43,9 +47,14 @@ def composite_loss(eps_y_s, eps_u_s, eps_y_t, eps_u_t, omega_hat, w=4.0):
 
 
 @torch.no_grad()
+<<<<<<< HEAD
 def calibration_metrics(eps_y_s, eps_u_s, eps_y_t, eps_u_t, eps_norm=1e-8):
     """Single-batch rho, cos(Delta), MSE_Delta (main paper Sec. 4.1); the
     reported values accumulate over all pairs (evaluate.py, calibration).
+=======
+def calibration_metrics(eps_y_s, eps_u_s, eps_y_t, eps_u_t, eps_norm=1e-12):
+    """rho, cos(Delta), MSE_Delta (main paper Sec. 4.1).
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
 
     Delta = eps^y - eps^0 is the guidance gap, the quantity CFG amplifies at
     every denoising step.
@@ -56,5 +65,9 @@ def calibration_metrics(eps_y_s, eps_u_s, eps_y_t, eps_u_t, eps_norm=1e-8):
 
     rho = (n_s.mean() / n_t.mean().clamp(min=eps_norm)).item()
     cos = ((d_s * d_t).sum(1) / (n_s * n_t).clamp(min=eps_norm)).mean().item()
+<<<<<<< HEAD
     mse = (d_s - d_t).pow(2).mean(1).mean().item()
+=======
+    mse = (d_s - d_t).pow(2).sum(1).mean().item()
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
     return {"rho": rho, "cos_delta": cos, "mse_delta": mse}

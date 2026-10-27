@@ -31,7 +31,11 @@ model:                        # ADM-style UNet
   params: 116.5M
 
 train:
+<<<<<<< HEAD
   epochs: 300
+=======
+  epochs: 130
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
   global_batch: 2048
   optimiser: adamw
   lr: 2.0e-4

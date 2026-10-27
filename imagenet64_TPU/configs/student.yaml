@@ -2,8 +2,12 @@
 # ImageNet-64 DASH student — 22.3M parameters (5.2x compression)
 # Values correspond to Table A1 of the supplementary material.
 #
+<<<<<<< HEAD
 # Pass --objective to train_student.py to switch between the main result and
 # the Table 2 baselines:
+=======
+# Set `objective` to switch between the main result and the Table 2 baselines:
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
 #   dash       lambda_im * L_im + lambda_un * L_un + lambda_an * L_an
 #   no_lun     drops L_un                        (ablation)
 #   composite  supervises only the guided score  (baseline)
@@ -57,16 +61,27 @@ train:
 
 loss:
   # lambda_im = lambda_un = 1.0 makes the residual Gram matrix the identity,
+<<<<<<< HEAD
   # so the two branch constraints are equally conditioned.
+=======
+  # so the two branch constraints are equally conditioned and neither
+  # dominates the gradient.
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
   lambda_im: 1.0
   lambda_un: 1.0
   lambda_an: 0.1
   composite_w: 4.0            # used only when objective == composite
 
 tirt:
+<<<<<<< HEAD
   # TIRT Transfer: the teacher's final lambda is copied and frozen.
   # Under L_DASH the gradient on lambda measures student-teacher mismatch at
   # a trained teacher, not content difficulty, so it is held fixed.
+=======
+  # TIRT Transfer: the teacher's converged lambda is copied and frozen.
+  # Under L_DASH the gradient on lambda measures student-teacher mismatch at
+  # a converged teacher, not content difficulty, so it is held fixed.
+>>>>>>> 913cf12715598ee9cce16173e9b8f38b46705ba0
   snr_gamma: 5.0
   transfer_from_teacher: true
   weight_objective: frozen
