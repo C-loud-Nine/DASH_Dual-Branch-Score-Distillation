@@ -5,8 +5,8 @@
 #           student  (ch=64,  nrb=1, ~6.1M  params).
 #
 # Key design choices:
-#   - GroupNorm(num_groups=32) throughout — required for weight compatibility
-#     between teacher and student when transferring TIRT curriculum.
+#   - GroupNorm with gcd(32, C) groups (see Normalize): 32 for the teacher
+#     and the ch=64 student; 16 on non-multiple-of-32 layers at ch=48.
 #   - Null class token at index num_classes enables unconditional forward pass
 #     without a separate network.
 #   - Self-attention applied only at 16x16 spatial resolution.
@@ -29,9 +29,11 @@ def nonlinearity(x):
 
 
 def Normalize(num_channels):
-    """GroupNorm-32. num_groups=32 is hardcoded to keep teacher/student
-    checkpoints weight-compatible across channel widths (64 and 128)."""
-    return nn.GroupNorm(num_groups=32, num_channels=num_channels,
+    """GroupNorm with gcd(32, C) groups: 32 for the ch=64 student and ch=128
+    teacher; 16 on layers whose width is not a multiple of 32 (ch=48 width
+    study, Supp. Table D14)."""
+    return nn.GroupNorm(num_groups=math.gcd(32, num_channels),
+                        num_channels=num_channels,
                         eps=1e-6, affine=True)
 
 

@@ -1,6 +1,6 @@
 # =============================================================================
 # training/losses.py
-# DASH distillation objective (Eq. 4-7 in paper).
+# DASH distillation objective (Eqs. 5-8 in paper).
 #
 # Three losses, all weighted by the frozen TIRT curriculum omega_hat_t:
 #
@@ -9,11 +9,10 @@
 #
 #   L_un  = E[omega_hat_t * || eps_S^∅      - eps_T^∅      ||^2]
 #            Unconditional loss: resolves structural underdetermination.
-#            Dominant contribution (67%/62% of total gain on C10/C100).
 #
 #   L_an  = E[omega_hat_t * || eps_S^y      - eps            ||^2]
 #            Anchor loss: regularises conditional branch toward ground-truth
-#            noise, preventing drift from teacher error in early training.
+#            noise, shifting the conditional optimum toward it (Supp. Remark C.2).
 #            Applied to conditional branch only — unconditional branch
 #            already has an exact teacher target from L_un.
 #

@@ -84,9 +84,9 @@ def build_loaders(cfg, data_root: str, download: bool = False):
     full_train = DS(data_root, train=True,  download=download, transform=tfm)
     test_ds    = DS(data_root, train=False, download=download, transform=tfm)
 
-    train_size = int(0.9 * len(full_train))
-    val_size   = len(full_train) - train_size
-    train_ds, val_ds = random_split(full_train, [train_size, val_size])
+    # All 50,000 training images are used (Supp. Table A4). The checkpoint is
+    # the final epoch; the logged loss on the test split is not used for selection.
+    train_ds, val_ds = full_train, test_ds
 
     kw = dict(pin_memory=True, num_workers=4,
               persistent_workers=True, prefetch_factor=2)
@@ -245,7 +245,7 @@ def train(args):
         student_tirt.load_state_dict(teacher_tirt_sd)
         print("TIRT curriculum transferred from teacher.")
     else:
-        print("Warning: no teacher TIRT found — using random init.")
+        print("Warning: no teacher TIRT found — using lambda=0 (Min-SNR) init.")
     for p in student_tirt.parameters():
         p.requires_grad_(False)
     student_tirt.eval()

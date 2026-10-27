@@ -8,7 +8,7 @@
 # At t ≈ T (pure noise): w(t) ≈ w_min  — gentle guidance for structure.
 # At t ≈ 0 (near-clean): w(t) ≈ w_max  — strong guidance for detail.
 #
-# TAG is applied at teacher inference only. Student distillation targets
+# TAG is applied at inference (teacher and students). Distillation targets
 # the branch outputs eps_T^y and eps_T^∅ directly, which are independent
 # of w(t) (they come from individual forced forward passes, not from the
 # composite guided prediction).

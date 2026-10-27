@@ -1,0 +1,64 @@
+# =============================================================================
+# ImageNet-64 teacher — 116.5M parameters
+# Values correspond to Table A1 of the supplementary material.
+# =============================================================================
+
+name: in64_teacher
+role: teacher
+
+data:
+  dataset: imagenet64
+  image_size: 64
+  num_classes: 1000
+  train_images: 1281167
+  normalise: [-1, 1]          # uint8 / 127.5 - 1
+  augmentation: none
+
+diffusion:
+  timesteps: 1000
+  beta_schedule: cosine
+  cosine_s: 0.008
+
+model:                        # ADM-style UNet
+  ch: 128
+  ch_mult: [1, 2, 3, 4]
+  num_res_blocks: 3
+  attn_resolutions: [16, 8]
+  dropout: 0.0
+  in_channels: 3
+  out_ch: 3
+  resamp_with_conv: true
+  params: 116.5M
+
+train:
+  epochs: 300
+  global_batch: 2048
+  optimiser: adamw
+  lr: 2.0e-4
+  lr_schedule: cosine         # no warmup
+  adam_betas: [0.9, 0.999]
+  grad_clip: 1.0
+  ema_decay: 0.9999
+  cfg_dropout: 0.1            # label-dropout rate for CFG
+  seed: 42
+  hardware: tpu
+
+tirt:                         # main paper Eq. (2)
+  # omega_t = [min(SNR_t, gamma) / SNR_t] * sigmoid(lambda_t), unit mean over T.
+  # The /SNR is the eps-prediction form: Min-SNR targets min(SNR, gamma) in
+  # x0-space and L_x0 = SNR * L_eps, so an eps-loss must divide by SNR.
+  snr_gamma: 5.0
+  lambda_init: 0.0            # lambda = 0 reduces exactly to Min-SNR
+  weight_objective: descent   # descent | ascent | frozen
+
+tag:                          # main paper Eq. (3), inference only
+  # w(t) = w_min + (w_max - w_min) * sigmoid(beta * (0.5 - t/T))
+  w_min: 1.0
+  w_max: 4.0
+  beta: 5.0
+
+eval:
+  ddim_steps: 50
+  n_samples: 50000
+  use_tag: true               # the reported protocol
+  reference: train

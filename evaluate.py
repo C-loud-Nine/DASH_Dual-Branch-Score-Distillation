@@ -8,7 +8,7 @@
 #   # Evaluate student on CIFAR-10 (3 seeds, 50K samples):
 #   python evaluate.py \
 #       --config      configs/student_cifar10.yaml \
-#       --ckpt        ./checkpoints/student_cifar10/ckpt_epoch_0270.pth \
+#       --ckpt        ./checkpoints/student_cifar10/ckpt_epoch_0300.pth \
 #       --teacher_ckpt ./checkpoints/teacher_cifar10/ckpt_epoch_0500.pth \
 #       --data_root   /path/to/cifar \
 #       --out_dir     ./eval_results/student_cifar10 \
@@ -153,7 +153,8 @@ def generate_images(model, schedule, out_dir: str, n_samples: int,
 # FID + IS
 # ---------------------------------------------------------------------------
 
-def compute_fid_is(img_dir: str, dataset: str, device_str: str):
+def compute_fid_is(img_dir: str, dataset: str, device_str: str,
+                   fid_ref: str = None):
     """Compute FID and IS using torch-fidelity."""
     try:
         from torch_fidelity import calculate_metrics
@@ -161,10 +162,10 @@ def compute_fid_is(img_dir: str, dataset: str, device_str: str):
         raise ImportError("torch-fidelity not installed. "
                           "Run: pip install torch-fidelity")
 
-    ref = "cifar10-train" if dataset == "cifar10" else None
+    ref = "cifar10-train" if dataset == "cifar10" else fid_ref
     if ref is None:
-        print("Warning: no built-in reference for CIFAR-100; "
-              "FID requires a precomputed statistics file.")
+        raise ValueError("CIFAR-100 FID needs --fid_ref: a folder of the "
+                         "50,000 CIFAR-100 training images (PNG).")
 
     m = calculate_metrics(
         input1=img_dir,
@@ -198,7 +199,7 @@ def compute_calibration_metrics(
     Compute guidance-gap calibration metrics over matched teacher-student pairs:
         rho        = E[||Delta_S||] / E[||Delta_T||]   (magnitude ratio)
         cos(Delta) = E[Delta_S . Delta_T / (||Delta_S|| ||Delta_T||)]
-        Gap MSE    = E[||Delta_S - Delta_T||^2]
+        Gap MSE    = E[(1/d) ||Delta_S - Delta_T||^2]   (per coordinate)
 
     rho ~= 1 and cos(Delta) ~= 1 indicate ideal calibration.
     """
@@ -217,8 +218,8 @@ def compute_calibration_metrics(
         for x0, cls in data_loader:
             if collected >= n_pairs:
                 break
-            x0  = x0.to(device)
-            cls = cls.to(device)
+            x0  = x0[:n_pairs - collected].to(device)
+            cls = cls[:n_pairs - collected].to(device)
             B   = x0.shape[0]
             t   = torch.randint(0, schedule.timesteps, (B,), device=device).long()
             x_t = schedule.q_sample(x0, t)
@@ -239,7 +240,7 @@ def compute_calibration_metrics(
             norm_S = dS_flat.norm(dim=1)          # (B,)
             norm_T = dT_flat.norm(dim=1)
 
-            cos = (dS_flat * dT_flat).sum(dim=1) / (norm_S * norm_T + 1e-8)
+            cos = (dS_flat * dT_flat).sum(dim=1) / (norm_S * norm_T).clamp(min=1e-8)
 
             gap_mse = F.mse_loss(delta_S, delta_T, reduction="none") \
                         .reshape(B, -1).mean(dim=1)
@@ -306,7 +307,7 @@ def evaluate(args):
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     ])
     DS = CIFAR10 if cfg.dataset == "cifar10" else CIFAR100
-    test_ds = DS(args.data_root, train=False, download=args.download, transform=tfm)
+    test_ds = DS(args.data_root, train=True, download=args.download, transform=tfm)  # calibration inputs from train (Supp. Table A2)
     test_loader = DataLoader(test_ds, batch_size=cfg.fid_batch_size,
                              shuffle=False, num_workers=4, pin_memory=True)
 
@@ -340,7 +341,7 @@ def evaluate(args):
 
         # FID + IS
         fid, is_mean, is_std = compute_fid_is(
-            img_dir, cfg.dataset, str(device))
+            img_dir, cfg.dataset, str(device), args.fid_ref)
         print(f"  FID: {fid:.2f}  IS: {is_mean:.2f} ± {is_std:.2f}")
 
         seed_results = {"fid": fid, "is_mean": is_mean, "is_std": is_std}
@@ -393,5 +394,7 @@ if __name__ == "__main__":
     parser.add_argument("--teacher_only", action="store_true",
                         help="Evaluate a teacher checkpoint (no calibration).")
     parser.add_argument("--download",     action="store_true")
+    parser.add_argument("--fid_ref",      default=None,
+                        help="CIFAR-100 only: folder of the 50K training images")
     args = parser.parse_args()
     evaluate(args)
