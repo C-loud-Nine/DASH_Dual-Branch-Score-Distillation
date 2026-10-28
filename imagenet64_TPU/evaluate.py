@@ -98,8 +98,13 @@ def main():
     a = p.parse_args()
 
     scfg = load(a.config)
-    tcfg = scfg.teacher
     ecfg = scfg.eval
+    if scfg.role == "teacher":
+        if not a.is_teacher:
+            p.error("Teacher config requires --is_teacher")
+        tcfg = scfg
+    else:
+        tcfg = scfg.teacher
     if a.n is None:
         a.n = ecfg.n_samples
     device = "cuda" if torch.cuda.is_available() else "cpu"
