@@ -171,7 +171,7 @@ All paper hyperparameters are in `configs/` (CIFAR) and `imagenet64_TPU/configs/
 |---|---|---|
 | Architecture | ch=128, nrb=2, 35.8M | ch=64, nrb=1, 6.1M |
 | Compression | — | 5.9× |
-| Iterations | 391K (~500 ep.) | 234K (~300 ep.) |
+| Iterations | 391,000 (500 ep.) | 234,600 (300 ep.) |
 | Batch size | 64 | 64 |
 | Learning rate | 2e-4 | 1e-4 |
 | EMA decay | 0.9999 | 0.9995 |
